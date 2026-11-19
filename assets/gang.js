@@ -112,6 +112,16 @@
         const t = ac.currentTime;
         for (let i = 0; i < 3; i++) noise(t + i * 0.09, 0.05, 1800 + i * 200, 3, 0.3, 'bandpass');
       },
+      jump() {
+        if (!ready()) return;
+        noise(ac.currentTime, 0.06, 700, 1, 0.25);
+      },
+      land() {
+        if (!ready()) return;
+        const t = ac.currentTime;
+        noise(t, 0.16, 260, 1.4, 0.9);
+        noise(t, 0.05, 1600, 1, 0.08, 'bandpass');
+      },
       paper() {
         if (!ready()) return;
         const t = ac.currentTime;
@@ -436,6 +446,8 @@
   const keys = Object.create(null);
   let lookDelta = 0;
   let bobPhase = 0;
+  let jumpZ = 0, jumpV = 0;            // Sprunghöhe (Felder) und -geschwindigkeit
+  const JUMP_V = 2.3, GRAVITY = 9.5;
   let focus = null;      // Tür, vor der man gerade steht
   let leaving = false;
   let lockedMsgUntil = 0;
@@ -453,7 +465,18 @@
     if (!solid(px - RADIUS * 0.7, ny + Math.sign(dy) * RADIUS) && !solid(px + RADIUS * 0.7, ny + Math.sign(dy) * RADIUS)) py = ny;
   }
 
+  function jump() {
+    if (leaving || jumpZ > 0 || jumpV !== 0) return;
+    jumpV = JUMP_V;
+    Sound.jump();
+  }
+
   function update(dt) {
+    if (jumpV !== 0 || jumpZ > 0) {
+      jumpV -= GRAVITY * dt;
+      jumpZ += jumpV * dt;
+      if (jumpZ <= 0) { jumpZ = 0; jumpV = 0; Sound.land(); }
+    }
     if (leaving) return;
     const turn = (keys.ArrowRight || keys.turnR ? 1 : 0) - (keys.ArrowLeft || keys.turnL ? 1 : 0);
     pa += turn * TURN_SPEED * dt + lookDelta;
@@ -485,7 +508,8 @@
     for (let i = 0; i < LAMPS.length; i++) lampPower[i] = LAMPS[i].flicker ? flick(time) : 1;
 
     const rx0 = dirX - plX, ry0 = dirY - plY, rx1 = dirX + plX, ry1 = dirY + plY;
-    const camZ = 0.5 * K;
+    const camH = 0.5 + jumpZ;          // Augenhöhe: 0.5 = halbe Wandhöhe
+    const camZ = camH * K, ceilZ = (1 - camH) * K;
 
     // Boden
     for (let y = horizon + 1; y < H; y++) {
@@ -503,7 +527,7 @@
     // Decke
     for (let y = horizon; y >= 0; y--) {
       const p = horizon - y + 1;
-      const rowDist = camZ / p;
+      const rowDist = ceilZ / p;
       const sx = rowDist * (rx1 - rx0) / W, sy = rowDist * (ry1 - ry0) / W;
       let fx = px + rowDist * rx0, fy = py + rowDist * ry0;
       const fog = 1 / (1 + rowDist * rowDist * 0.012);
@@ -555,7 +579,7 @@
       if (x === W >> 1 && DOORS[tile] && perp < OPEN_DIST) focus = DOORS[tile];
 
       const lineH = K / perp;
-      const top = horizon - lineH / 2;
+      const top = horizon - (1 - camH) * lineH;
       const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(H, Math.ceil(top + lineH));
       const tex = T[tile] || T[1];
       const lightBase = lightAt(hitX + (side === 0 ? -stepX * 0.3 : 0), hitY + (side === 1 ? -stepY * 0.3 : 0));
@@ -580,7 +604,7 @@
       const screenX = (W / 2) * (1 + tX / tY);
       const size = K / tY;                       // Wandhöhe in dieser Distanz
       const sprH = size * 0.62, sprW = sprH;
-      const floorY = horizon + size / 2;
+      const floorY = horizon + camH * size;
       const top = floorY - sprH;
       const xs = Math.max(0, Math.ceil(screenX - sprW / 2)), xe = Math.min(W, Math.ceil(screenX + sprW / 2));
       const ys = Math.max(0, Math.ceil(top)), ye = Math.min(H, Math.ceil(floorY));
@@ -639,7 +663,8 @@
 
   // ---------- Eingabe ----------
   addEventListener('keydown', e => {
-    if (e.code === 'KeyE' || e.code === 'Enter' || e.code === 'Space') { openFocused(); e.preventDefault(); return; }
+    if (e.code === 'Space') { if (!e.repeat) jump(); e.preventDefault(); return; }
+    if (e.code === 'KeyE' || e.code === 'Enter') { openFocused(); e.preventDefault(); return; }
     if (/^(Arrow|Key[WASD])/.test(e.code)) { keys[e.code] = true; e.preventDefault(); }
   });
   addEventListener('keyup', e => { keys[e.code] = false; });
@@ -658,7 +683,7 @@
   // Touch-Buttons
   document.querySelectorAll('[data-key]').forEach(btn => {
     const k = btn.dataset.key;
-    const on = e => { e.preventDefault(); if (k === 'open') openFocused(); else keys[k] = true; };
+    const on = e => { e.preventDefault(); if (k === 'open') openFocused(); else if (k === 'jump') jump(); else keys[k] = true; };
     const off = e => { e.preventDefault(); keys[k] = false; };
     btn.addEventListener('pointerdown', on);
     btn.addEventListener('pointerup', off);

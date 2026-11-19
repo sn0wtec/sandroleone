@@ -36,6 +36,7 @@ window.Gedanken = (() => {
     p.className = 'gb-msg';
     linkify(p, t.text);
     div.append(meta, p);
+    if (window.Hearts) div.append(Hearts.button('thought', t.id, t.hearts));
     return div;
   }
 

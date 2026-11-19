@@ -35,6 +35,7 @@
     p.className = 'gb-msg';
     p.textContent = e.message;
     div.append(h, meta, p);
+    if (window.Hearts) div.append(Hearts.button('entry', e.id, e.hearts));
     return div;
   }
 

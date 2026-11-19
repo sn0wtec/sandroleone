@@ -39,7 +39,7 @@
       .help { display: none; }
       .touch { display: grid; position: fixed; bottom: 40px; left: 16px; grid-template-columns: repeat(3, 56px);
         grid-template-rows: repeat(2, 56px); gap: 6px; }
-      .touch.right { left: auto; right: 16px; grid-template-columns: 96px; grid-template-rows: 56px; }
+      .touch.right { left: auto; right: 16px; grid-template-columns: 96px; grid-template-rows: 56px 56px; }
       .touch button { font: inherit; font-size: 20px; color: #ffd34d; background: rgba(0,0,0,.55);
         border: 2px solid #ffd34d; border-radius: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
       .touch.right button { font-size: 14px; }
@@ -52,7 +52,7 @@
   <canvas id="view" aria-label="Ein Gang mit Türen. Die Türen führen zu Gedanken, Gästebuch, Über mich und Archiv."></canvas>
   <div class="crosshair" aria-hidden="true"></div>
   <div class="hud" aria-hidden="true"><b>sandroleone.ch</b></div>
-  <div class="help" aria-hidden="true">W/S / ↑↓ gehen · A/D seitlich<br>←→ oder Maus ziehen: umschauen<br>E / Klick: Tür öffnen</div>
+  <div class="help" aria-hidden="true">W/S / ↑↓ gehen · A/D seitlich<br>←→ oder Maus ziehen: umschauen<br>Leertaste: springen · E / Klick: Tür öffnen</div>
   <div class="visitors" aria-label="Besucherzähler">Besucher <b data-visits>······</b></div>
   <button id="sound" class="sound" type="button" aria-pressed="false">🔇 Ton aus</button>
   <div id="prompt" hidden></div>
@@ -61,7 +61,7 @@
     <span></span><button data-key="fwd">▲</button><span></span>
     <button data-key="turnL">◀</button><button data-key="back">▼</button><button data-key="turnR">▶</button>
   </div>
-  <div class="touch right" aria-hidden="true"><button data-key="open">ÖFFNEN</button></div>
+  <div class="touch right" aria-hidden="true"><button data-key="jump">SPRUNG</button><button data-key="open">ÖFFNEN</button></div>
 
   <nav class="skip" aria-label="Gang überspringen">
     Gang überspringen:

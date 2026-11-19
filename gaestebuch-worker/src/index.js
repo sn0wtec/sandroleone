@@ -14,6 +14,9 @@
  *   PUT    /admin/thoughts/:id          bearbeiten {text}
  *   DELETE /admin/thoughts/:id          löschen
  *
+ * Herzen:
+ *   POST /hearts {kind: 'entry'|'thought', id}   ein Herz pro IP, Eintrag und Tag
+ *
  * Besucherzähler:
  *   GET  /counter        aktueller Stand
  *   POST /counter/hit    +1 (der Browser zählt sich nur einmal pro Sitzung)
@@ -40,6 +43,7 @@ export default {
       if (path === '/entries' && request.method === 'GET') return listPublic(url, env, cors);
       if (path === '/entries' && request.method === 'POST') return createEntry(request, env, cors);
       if (path === '/thoughts' && request.method === 'GET') return listThoughts(url, env, cors);
+      if (path === '/hearts' && request.method === 'POST') return heart(request, env, cors);
       if (path === '/counter' && request.method === 'GET') return counter(env, cors, false);
       if (path === '/counter/hit' && request.method === 'POST') return counter(env, cors, true);
 
@@ -69,7 +73,7 @@ export default {
 async function listPublic(url, env, cors) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
   const { results } = await env.DB.prepare(
-    'SELECT id, name, message, homepage, created_at FROM entries WHERE approved = 1 ORDER BY id DESC LIMIT ? OFFSET ?'
+    'SELECT id, name, message, homepage, hearts, created_at FROM entries WHERE approved = 1 ORDER BY id DESC LIMIT ? OFFSET ?'
   ).bind(PAGE_SIZE + 1, (page - 1) * PAGE_SIZE).all();
   const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM entries WHERE approved = 1').first('n');
   return json({
@@ -125,6 +129,32 @@ async function createEntry(request, env, cors) {
   return json({ status: moderated ? 'pending' : 'published' }, 201, cors);
 }
 
+// ---------- Herzen ----------
+const HEART_TABLES = { entry: 'entries', thought: 'thoughts' };
+
+async function heart(request, env, cors) {
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Ungültige Anfrage.' }, 400, cors); }
+  const table = HEART_TABLES[body.kind];
+  const id = Number.isInteger(body.id) ? body.id : 0;
+  if (!table || id < 1) return json({ error: 'Ungültige Anfrage.' }, 400, cors);
+
+  const visible = table === 'entries' ? ' AND approved = 1' : '';
+  const exists = await env.DB.prepare(`SELECT hearts FROM ${table} WHERE id = ?${visible}`).bind(id).first();
+  if (!exists) return json({ error: 'Nicht gefunden.' }, 404, cors);
+
+  const ipHash = await hashIp(request, env);
+  const [, ins] = await env.DB.batch([
+    env.DB.prepare("DELETE FROM heart_log WHERE created_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 day')"),
+    env.DB.prepare('INSERT OR IGNORE INTO heart_log (kind, item_id, ip_hash) VALUES (?, ?, ?)').bind(body.kind, id, ipHash)
+  ]);
+  const added = ins.meta.changes > 0;
+  const hearts = added
+    ? await env.DB.prepare(`UPDATE ${table} SET hearts = hearts + 1 WHERE id = ? RETURNING hearts`).bind(id).first('hearts')
+    : exists.hearts;
+  return json({ hearts, added }, 200, cors);
+}
+
 // ---------- Besucherzähler ----------
 async function counter(env, cors, hit) {
   const visits = hit
@@ -137,7 +167,7 @@ async function counter(env, cors, hit) {
 async function listThoughts(url, env, cors) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
   const { results } = await env.DB.prepare(
-    'SELECT id, text, created_at, updated_at FROM thoughts ORDER BY id DESC LIMIT ? OFFSET ?'
+    'SELECT id, text, hearts, created_at, updated_at FROM thoughts ORDER BY id DESC LIMIT ? OFFSET ?'
   ).bind(THOUGHTS_PAGE + 1, (page - 1) * THOUGHTS_PAGE).all();
   return json({ thoughts: results.slice(0, THOUGHTS_PAGE), page, hasMore: results.length > THOUGHTS_PAGE },
     200, { ...cors, 'Cache-Control': 'no-store' });
@@ -171,7 +201,7 @@ async function deleteThought(id, env, cors) {
 // ---------- Admin ----------
 async function listAdmin(env, cors) {
   const { results } = await env.DB.prepare(
-    'SELECT id, name, message, homepage, approved, created_at FROM entries ORDER BY approved ASC, id DESC LIMIT 500'
+    'SELECT id, name, message, homepage, approved, hearts, created_at FROM entries ORDER BY approved ASC, id DESC LIMIT 500'
   ).all();
   return json({ entries: results, moderation: env.MODERATION !== 'false' }, 200, { ...cors, 'Cache-Control': 'no-store' });
 }
