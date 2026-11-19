@@ -9,3 +9,15 @@ Persönliche Webseite. Statisch, gehostet über GitHub Pages (`CNAME` → sandro
 
 Türen und Karte werden oben in `assets/gang.js` definiert (`map`, `DOORS`).
 Lokal testen: `python3 -m http.server` im Repo-Ordner, dann http://localhost:8000
+
+## Gästebuch
+
+- `gaestebuch-worker/` – API als Cloudflare Worker mit D1-Datenbank
+- `.github/workflows/deploy-gaestebuch.yml` – deployt den Worker bei Änderungen in `gaestebuch-worker/`
+- Benötigte Repo-Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GB_ADMIN_PASSWORD`
+- Moderation an/aus: `MODERATION` in `gaestebuch-worker/wrangler.toml`
+- Adresse des Workers: `assets/gb-config.js`
+- Verwaltung: `/gaestebuch/admin/`
+
+Lokal: `cd gaestebuch-worker && npm install && npx wrangler d1 migrations apply sandroleone-gaestebuch --local && npx wrangler dev`
+(Admin-Passwort lokal in `.dev.vars`: `ADMIN_PASSWORD=...`), dann `/gaestebuch/?api=http://localhost:8787`
