@@ -7,6 +7,12 @@
  *   GET    /admin/entries               alle Einträge inkl. wartende
  *   POST   /admin/entries/:id/approve   freigeben
  *   DELETE /admin/entries/:id           löschen
+ *
+ * Gedanken (Blog):
+ *   GET    /thoughts?page=1             öffentlich, neueste zuerst
+ *   POST   /admin/thoughts              neuer Gedanke {text}
+ *   PUT    /admin/thoughts/:id          bearbeiten {text}
+ *   DELETE /admin/thoughts/:id          löschen
  */
 
 const PAGE_SIZE = 20;
@@ -14,6 +20,8 @@ const LIMITS = { name: 40, message: 1000, homepage: 200 };
 const RATE_WINDOW_MIN = 10;   // Minuten
 const RATE_MAX = 3;           // Einträge pro IP und Zeitfenster
 const MIN_FILL_MS = 3000;     // Bots füllen schneller aus als Menschen
+const THOUGHT_MAX = 3000;
+const THOUGHTS_PAGE = 15;
 
 export default {
   async fetch(request, env) {
@@ -27,6 +35,7 @@ export default {
 
       if (path === '/entries' && request.method === 'GET') return listPublic(url, env, cors);
       if (path === '/entries' && request.method === 'POST') return createEntry(request, env, cors);
+      if (path === '/thoughts' && request.method === 'GET') return listThoughts(url, env, cors);
 
       if (path.startsWith('/admin/')) {
         if (!(await isAdmin(request, env))) return json({ error: 'Nicht berechtigt.' }, 401, cors);
@@ -34,6 +43,11 @@ export default {
         const m = path.match(/^\/admin\/entries\/(\d+)(\/approve)?$/);
         if (m && m[2] && request.method === 'POST') return approve(+m[1], env, cors);
         if (m && !m[2] && request.method === 'DELETE') return remove(+m[1], env, cors);
+        if (path === '/admin/thoughts' && request.method === 'POST') return createThought(request, env, cors);
+        const t = path.match(/^\/admin\/thoughts\/(\d+)$/);
+        if (t && request.method === 'PUT') return updateThought(+t[1], request, env, cors);
+        if (t && request.method === 'DELETE') return deleteThought(+t[1], env, cors);
+        if (path === '/admin/check' && request.method === 'GET') return json({ ok: true }, 200, cors);
       }
 
       if (path === '/') return json({ ok: true, service: 'sandroleone.ch Gästebuch' }, 200, cors);
@@ -100,6 +114,41 @@ async function createEntry(request, env, cors) {
   return json({ status: moderated ? 'pending' : 'published' }, 201, cors);
 }
 
+// ---------- Gedanken ----------
+async function listThoughts(url, env, cors) {
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
+  const { results } = await env.DB.prepare(
+    'SELECT id, text, created_at, updated_at FROM thoughts ORDER BY id DESC LIMIT ? OFFSET ?'
+  ).bind(THOUGHTS_PAGE + 1, (page - 1) * THOUGHTS_PAGE).all();
+  return json({ thoughts: results.slice(0, THOUGHTS_PAGE), page, hasMore: results.length > THOUGHTS_PAGE },
+    200, { ...cors, 'Cache-Control': 'no-store' });
+}
+
+async function readThought(request) {
+  try { const b = await request.json(); return clean(b.text, THOUGHT_MAX, true); } catch { return ''; }
+}
+
+async function createThought(request, env, cors) {
+  const text = await readThought(request);
+  if (!text) return json({ error: 'Der Gedanke ist leer.' }, 400, cors);
+  const r = await env.DB.prepare('INSERT INTO thoughts (text) VALUES (?)').bind(text).run();
+  return json({ ok: true, id: r.meta.last_row_id }, 201, cors);
+}
+
+async function updateThought(id, request, env, cors) {
+  const text = await readThought(request);
+  if (!text) return json({ error: 'Der Gedanke ist leer.' }, 400, cors);
+  const r = await env.DB.prepare(
+    "UPDATE thoughts SET text = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?"
+  ).bind(text, id).run();
+  return json({ ok: r.meta.changes > 0 }, r.meta.changes ? 200 : 404, cors);
+}
+
+async function deleteThought(id, env, cors) {
+  const r = await env.DB.prepare('DELETE FROM thoughts WHERE id = ?').bind(id).run();
+  return json({ ok: r.meta.changes > 0 }, r.meta.changes ? 200 : 404, cors);
+}
+
 // ---------- Admin ----------
 async function listAdmin(env, cors) {
   const { results } = await env.DB.prepare(
@@ -155,7 +204,7 @@ function corsHeaders(request, env) {
   const origin = request.headers.get('Origin') || '';
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim());
   const h = {
-    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
     'Vary': 'Origin'

@@ -107,3 +107,6 @@ form.gb small { font: 11px Verdana, sans-serif; color: #555; }
 .admin-actions button { margin-right: 6px; }
 .post.pending { border-color: #e0a000; background: #fff6d6; }
 [hidden] { display: none !important; }
+.post.thought { border-style: solid; border-color: #c0c0c0; border-left: 6px solid #000080; }
+.post.thought .gb-msg { font-size: 18px; margin: 6px 0 2px; }
+form.gb textarea[name=text] { font-size: 16px; }

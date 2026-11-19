@@ -3,22 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog – sandroleone.ch</title>
+  <title>Gedanken – sandroleone.ch</title>
   <link rel="stylesheet" href="../assets/retro.css">
 </head>
 <body>
   <div class="page">
-    <div class="titlebar"><span>Blog – sandroleone.ch</span><span>_ □ ×</span></div>
+    <div class="titlebar"><span>Gedanken – sandroleone.ch</span><span>_ □ ×</span></div>
     <a class="back" href="../">◄ Zurück in den Gang</a>
-    <h1>Blog</h1>
-    <div class="marquee"><span>+++ Willkommen im Blog +++ Neue Einträge folgen +++ Danke für deinen Besuch +++</span></div>
+    <h1>Gedanken</h1>
+    <div class="marquee"><span>+++ Thoughts of the day +++ Frisch aus dem Kopf +++ Ungefiltert seit 2026 +++</span></div>
     <div class="content">
-      <div class="construction"><span>🚧 UNDER CONSTRUCTION 🚧</span></div>
-      <div class="post">
-        <h2>Hallo Welt!</h2>
-        <div class="date">Eintrag #1</div>
-        <p>Der erste Eintrag. Hier wird bald richtig geschrieben.</p>
-      </div>
+      <p style="text-align:center"><i>Gedanken des Tages. Manchmal tief, manchmal nicht.</i></p>
+      <div id="th-list">Lade Gedanken …</div>
+      <p style="text-align:center"><button id="th-more" class="back" type="button" hidden>Ältere Gedanken ▼</button></p>
     </div>
     <hr>
     <div class="badges">
@@ -26,7 +23,28 @@
       <span class="badge b">BEST VIEWED<br>WITH ANY BROWSER</span>
       <span class="badge c">MADE IN<br>ST. GALLEN</span>
     </div>
-    <footer>© sandroleone.ch</footer>
+    <footer>© sandroleone.ch · <a href="schreiben/" title="Schreiben">✎</a></footer>
   </div>
+  <script src="../assets/gb-config.js"></script>
+  <script src="../assets/gedanken.js"></script>
+  <script>
+  (() => {
+    const list = document.getElementById('th-list');
+    const more = document.getElementById('th-more');
+    let page = 1;
+    async function load() {
+      try {
+        const d = await Gedanken.fetchPage(page);
+        if (page === 1) list.textContent = d.thoughts.length ? '' : 'Noch still hier. Der erste Gedanke kommt bestimmt.';
+        d.thoughts.forEach(t => list.append(Gedanken.render(t)));
+        more.hidden = !d.hasMore;
+      } catch (e) {
+        if (page === 1) list.textContent = 'Die Gedanken sind gerade nicht erreichbar. Versuch es später nochmals.';
+      }
+    }
+    more.addEventListener('click', () => { page++; load(); });
+    load();
+  })();
+  </script>
 </body>
 </html>

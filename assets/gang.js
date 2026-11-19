@@ -37,7 +37,7 @@
   map[16][2] = 14; map[16][1] = 15;             // Doppeltür Archiv (links/rechts)
 
   const DOORS = {
-    10: { label: 'BLOG', name: 'Blog', href: 'blog/', wood: [122, 62, 32] },
+    10: { label: 'GEDANKEN', name: 'Gedanken', href: 'blog/', wood: [122, 62, 32] },
     11: { label: 'GÄSTEBUCH', name: 'Gästebuch', href: 'gaestebuch/', wood: [40, 84, 62] },
     12: { label: 'ÜBER MICH', name: 'Über mich', href: 'ueber-mich/', wood: [44, 58, 110] },
     13: { label: '???', name: '???', locked: true, wood: [70, 70, 70] },

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Gedanken schreiben – sandroleone.ch</title>
+  <link rel="stylesheet" href="../../assets/retro.css">
+</head>
+<body>
+  <div class="page">
+    <div class="titlebar"><span>Gedanken schreiben – sandroleone.ch</span><span>_ □ ×</span></div>
+    <a class="back" href="../">◄ Zu den Gedanken</a>
+    <h1>Gedanken schreiben</h1>
+    <div class="content">
+      <form class="gb" id="login">
+        <fieldset>
+          <legend>Anmelden</legend>
+          <label>Passwort<br><input name="pw" type="password" autocomplete="current-password" required></label>
+          <button type="submit">Anmelden</button>
+        </fieldset>
+      </form>
+
+      <form class="gb" id="compose" hidden>
+        <fieldset>
+          <legend id="compose-legend">Neuer Gedanke</legend>
+          <textarea name="text" rows="6" maxlength="3000" required placeholder="Was geht dir heute durch den Kopf?"></textarea>
+          <div class="admin-actions">
+            <button type="submit" id="compose-btn">Veröffentlichen</button>
+            <button type="button" id="cancel-edit" hidden>Abbrechen</button>
+          </div>
+          <small>Strg/Cmd + Enter veröffentlicht direkt.</small>
+        </fieldset>
+      </form>
+      <p id="status" class="gb-status" role="status"></p>
+      <div id="list"></div>
+      <p style="text-align:center"><button id="more" class="back" type="button" hidden>Ältere Gedanken ▼</button></p>
+    </div>
+    <footer>© sandroleone.ch</footer>
+  </div>
+  <script src="../../assets/gb-config.js"></script>
+  <script src="../../assets/gedanken.js"></script>
+  <script>
+  (() => {
+    const API = window.GB_API;
+    const loginForm = document.getElementById('login');
+    const compose = document.getElementById('compose');
+    const textarea = compose.querySelector('textarea');
+    const composeBtn = document.getElementById('compose-btn');
+    const cancelBtn = document.getElementById('cancel-edit');
+    const legend = document.getElementById('compose-legend');
+    const list = document.getElementById('list');
+    const more = document.getElementById('more');
+    const status = document.getElementById('status');
+    let pw = '', page = 1, editing = null;
+    try { pw = sessionStorage.getItem('gb-admin') || ''; } catch (e) {}
+
+    async function call(path, method = 'GET', body) {
+      const r = await fetch(API + path, {
+        method,
+        headers: { Authorization: 'Bearer ' + pw, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      if (r.status === 401) { logout('Falsches Passwort.'); throw new Error('401'); }
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Fehler.');
+      return d;
+    }
+
+    function logout(msg) {
+      pw = '';
+      try { sessionStorage.removeItem('gb-admin'); } catch (e) {}
+      loginForm.hidden = false; compose.hidden = true; list.textContent = ''; more.hidden = true;
+      status.textContent = msg || '';
+    }
+
+    function startEdit(t) {
+      editing = t.id;
+      textarea.value = t.text;
+      legend.textContent = 'Gedanke bearbeiten';
+      composeBtn.textContent = 'Speichern';
+      cancelBtn.hidden = false;
+      compose.scrollIntoView({ behavior: 'smooth' });
+      textarea.focus();
+    }
+    function stopEdit() {
+      editing = null;
+      textarea.value = '';
+      legend.textContent = 'Neuer Gedanke';
+      composeBtn.textContent = 'Veröffentlichen';
+      cancelBtn.hidden = true;
+    }
+    cancelBtn.addEventListener('click', stopEdit);
+
+    async function load(reset) {
+      if (reset) { page = 1; list.textContent = ''; }
+      const d = await Gedanken.fetchPage(page);
+      for (const t of d.thoughts) {
+        const el = Gedanken.render(t);
+        const actions = document.createElement('div');
+        actions.className = 'admin-actions';
+        const ed = document.createElement('button'); ed.textContent = '✎ Bearbeiten';
+        ed.onclick = () => startEdit(t);
+        const del = document.createElement('button'); del.textContent = '✖ Löschen';
+        del.onclick = async () => {
+          if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = 'Wirklich löschen?'; return; }
+          await call(`/admin/thoughts/${t.id}`, 'DELETE');
+          if (editing === t.id) stopEdit();
+          load(true);
+        };
+        actions.append(ed, del);
+        el.append(actions);
+        list.append(el);
+      }
+      more.hidden = !d.hasMore;
+    }
+    more.addEventListener('click', () => { page++; load(false); });
+
+    async function enter() {
+      await call('/admin/check');
+      loginForm.hidden = true;
+      compose.hidden = false;
+      status.textContent = '';
+      textarea.focus();
+      await load(true);
+    }
+
+    loginForm.addEventListener('submit', ev => {
+      ev.preventDefault();
+      pw = new FormData(loginForm).get('pw');
+      try { sessionStorage.setItem('gb-admin', pw); } catch (e) {}
+      enter().catch(() => {});
+    });
+
+    compose.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const text = textarea.value.trim();
+      if (!text) return;
+      composeBtn.disabled = true;
+      try {
+        if (editing) await call(`/admin/thoughts/${editing}`, 'PUT', { text });
+        else await call('/admin/thoughts', 'POST', { text });
+        status.textContent = editing ? '★ Gespeichert ★' : '★ Veröffentlicht ★';
+        stopEdit();
+        await load(true);
+      } catch (e) {
+        if (e.message !== '401') status.textContent = e.message;
+      } finally {
+        composeBtn.disabled = false;
+      }
+    });
+    textarea.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) compose.requestSubmit();
+    });
+
+    if (pw) enter().catch(() => {});
+  })();
+  </script>
+</body>
+</html>

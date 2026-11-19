@@ -19,5 +19,10 @@ Lokal testen: `python3 -m http.server` im Repo-Ordner, dann http://localhost:800
 - Adresse des Workers: `assets/gb-config.js`
 - Verwaltung: `/gaestebuch/admin/`
 
+## Gedanken (Blog)
+
+- Gleicher Worker, Tabelle `thoughts` (`migrations/0002_thoughts.sql`)
+- Anzeige: `/blog/`, Schreiben/Bearbeiten/Löschen: `/blog/schreiben/` (gleiches Admin-Passwort)
+
 Lokal: `cd gaestebuch-worker && npm install && npx wrangler d1 migrations apply sandroleone-gaestebuch --local && npx wrangler dev`
 (Admin-Passwort lokal in `.dev.vars`: `ADMIN_PASSWORD=...`), dann `/gaestebuch/?api=http://localhost:8787`
