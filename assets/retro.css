@@ -95,3 +95,15 @@ footer { text-align: center; font: 12px Verdana, sans-serif; color: #444; margin
 form.gb { display: grid; gap: 6px; max-width: 420px; }
 form.gb input, form.gb textarea, form.gb button { font: 15px "Courier New", monospace; }
 form.gb fieldset { border: 2px groove #c0c0c0; }
+form.gb fieldset { display: grid; gap: 8px; }
+form.gb input, form.gb textarea { width: 100%; box-sizing: border-box; border: 2px inset #c0c0c0; background: #fff; padding: 3px; }
+form.gb button { justify-self: start; padding: 4px 14px; background: #c0c0c0; border: 3px outset #fff; cursor: pointer; }
+form.gb button:active { border-style: inset; }
+form.gb small { font: 11px Verdana, sans-serif; color: #555; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.gb-status { text-align: center; font: bold 15px "Comic Sans MS", "Comic Sans", cursive; color: #c00000; min-height: 1em; }
+.gb-msg { white-space: pre-wrap; overflow-wrap: anywhere; }
+.counter b { font: bold 16px "Courier New", monospace; background: #000; color: #0f0; padding: 1px 4px; letter-spacing: 2px; }
+.admin-actions button { margin-right: 6px; }
+.post.pending { border-color: #e0a000; background: #fff6d6; }
+[hidden] { display: none !important; }

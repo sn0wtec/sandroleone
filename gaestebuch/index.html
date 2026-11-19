@@ -11,18 +11,25 @@
     <div class="titlebar"><span>Gästebuch – sandroleone.ch</span><span>_ □ ×</span></div>
     <a class="back" href="../">◄ Zurück in den Gang</a>
     <h1>Gästebuch</h1>
-    <div class="marquee"><span>+++ Trag dich ein! +++ Das Gästebuch ist bald offen +++</span></div>
+    <div class="marquee"><span>+++ Trag dich ein! +++ Jeder Gruss zählt +++ Danke für deinen Besuch +++</span></div>
     <div class="content">
-      <div class="construction"><span>🚧 UNDER CONSTRUCTION 🚧</span></div>
-      <p>Das Gästebuch ist noch nicht freigeschaltet. Bald kannst du hier einen Gruss hinterlassen.</p>
-      <form class="gb" onsubmit="return false">
-        <fieldset disabled>
+      <p style="text-align:center">Schön, dass du da bist! Hinterlass doch einen Gruss.<br>
+        <span class="counter">Einträge: <b id="gb-count">000000</b></span></p>
+      <form class="gb" id="gb-form">
+        <fieldset>
           <legend>Neuer Eintrag</legend>
-          <label>Name<br><input type="text" maxlength="40"></label><br>
-          <label>Nachricht<br><textarea rows="4" maxlength="500"></textarea></label><br>
+          <label>Name*<br><input name="name" type="text" maxlength="40" required></label>
+          <label>Homepage (optional)<br><input name="homepage" type="text" maxlength="200" placeholder="www.meine-seite.ch"></label>
+          <label class="hp" aria-hidden="true">Website<br><input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+          <label>Nachricht*<br><textarea name="message" rows="5" maxlength="1000" required></textarea></label>
           <button type="submit">Eintragen!</button>
+          <small>Gespeichert werden Name, Nachricht, Homepage und Zeitpunkt. Deine IP-Adresse wird nicht gespeichert.</small>
         </fieldset>
       </form>
+      <p id="gb-status" class="gb-status" role="status"></p>
+      <hr>
+      <div id="gb-list"></div>
+      <p style="text-align:center"><button id="gb-more" class="back" type="button" hidden>Ältere Einträge ▼</button></p>
     </div>
     <hr>
     <div class="badges">
@@ -32,5 +39,7 @@
     </div>
     <footer>© sandroleone.ch</footer>
   </div>
+  <script src="../assets/gb-config.js"></script>
+  <script src="../assets/gaestebuch.js"></script>
 </body>
 </html>

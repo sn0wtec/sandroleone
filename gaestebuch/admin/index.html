@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Gästebuch-Admin – sandroleone.ch</title>
+  <link rel="stylesheet" href="../../assets/retro.css">
+</head>
+<body>
+  <div class="page">
+    <div class="titlebar"><span>Gästebuch-Admin – sandroleone.ch</span><span>_ □ ×</span></div>
+    <a class="back" href="../">◄ Zum Gästebuch</a>
+    <h1>Gästebuch-Admin</h1>
+    <div class="content">
+      <form class="gb" id="login">
+        <fieldset>
+          <legend>Anmelden</legend>
+          <label>Passwort<br><input name="pw" type="password" autocomplete="current-password" required></label>
+          <button type="submit">Anmelden</button>
+        </fieldset>
+      </form>
+      <p id="status" class="gb-status" role="status"></p>
+      <div id="list"></div>
+    </div>
+    <footer>© sandroleone.ch</footer>
+  </div>
+  <script src="../../assets/gb-config.js"></script>
+  <script>
+  (() => {
+    const API = window.GB_API;
+    const loginForm = document.getElementById('login');
+    const list = document.getElementById('list');
+    const status = document.getElementById('status');
+    let pw = '';
+    try { pw = sessionStorage.getItem('gb-admin') || ''; } catch (e) {}
+
+    async function call(path, method = 'GET') {
+      const r = await fetch(API + path, { method, headers: { Authorization: 'Bearer ' + pw } });
+      if (r.status === 401) { logout('Falsches Passwort.'); throw new Error('401'); }
+      return r.json();
+    }
+
+    function logout(msg) {
+      pw = '';
+      try { sessionStorage.removeItem('gb-admin'); } catch (e) {}
+      loginForm.hidden = false; list.textContent = ''; status.textContent = msg || '';
+    }
+
+    async function load() {
+      status.textContent = 'Lade …';
+      const d = await call('/admin/entries');
+      loginForm.hidden = true;
+      const pending = d.entries.filter(e => !e.approved).length;
+      status.textContent = `${d.entries.length} Einträge, ${pending} warten auf Freigabe. Moderation: ${d.moderation ? 'an' : 'aus'}.`;
+      list.textContent = '';
+      for (const e of d.entries) {
+        const div = document.createElement('div');
+        div.className = 'post' + (e.approved ? '' : ' pending');
+        const h = document.createElement('h2'); h.textContent = e.name;
+        const meta = document.createElement('div'); meta.className = 'date';
+        meta.textContent = `#${e.id} · ${e.created_at} · ${e.approved ? 'sichtbar' : 'wartet'}${e.homepage ? ' · ' + e.homepage : ''}`;
+        const p = document.createElement('p'); p.className = 'gb-msg'; p.textContent = e.message;
+        const actions = document.createElement('div'); actions.className = 'admin-actions';
+        if (!e.approved) {
+          const ok = document.createElement('button'); ok.textContent = '✔ Freigeben';
+          ok.onclick = async () => { await call(`/admin/entries/${e.id}/approve`, 'POST'); load(); };
+          actions.append(ok);
+        }
+        const del = document.createElement('button'); del.textContent = '✖ Löschen';
+        del.onclick = async () => {
+          if (del.dataset.sure) { await call(`/admin/entries/${e.id}`, 'DELETE'); load(); }
+          else { del.dataset.sure = '1'; del.textContent = 'Wirklich löschen?'; }
+        };
+        actions.append(del);
+        div.append(h, meta, p, actions);
+        list.append(div);
+      }
+    }
+
+    loginForm.addEventListener('submit', ev => {
+      ev.preventDefault();
+      pw = new FormData(loginForm).get('pw');
+      try { sessionStorage.setItem('gb-admin', pw); } catch (e) {}
+      load().catch(() => {});
+    });
+
+    if (pw) load().catch(() => {});
+  })();
+  </script>
+</body>
+</html>
