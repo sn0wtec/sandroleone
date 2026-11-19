@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>sandroleone.ch</title>
+  <meta name="description" content="Die persönliche Webseite von Sandro Leone. Lauf den Gang hinunter und öffne eine Tür.">
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #e8dcb8; overflow: hidden;
+      font-family: "Courier New", Courier, monospace; }
+    #view { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: cover;
+      image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; cursor: grab; }
+    body.can-open #view { cursor: pointer; }
+    .hud { position: fixed; left: 16px; top: 12px; font-size: 14px; letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #000; pointer-events: none; }
+    .hud b { color: #ffd34d; }
+    #prompt { position: fixed; left: 50%; top: 62%; transform: translateX(-50%);
+      background: rgba(0,0,0,.7); border: 2px solid #ffd34d; padding: 6px 12px; font-size: 16px;
+      color: #ffd34d; text-shadow: 1px 1px 0 #000; pointer-events: none; white-space: nowrap;
+      animation: blink 1.1s steps(2, start) infinite; }
+    @keyframes blink { 50% { border-color: transparent; } }
+    .crosshair { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
+      background: #ffd34d; opacity: .6; pointer-events: none; }
+    .help { position: fixed; right: 16px; top: 12px; font-size: 12px; opacity: .75; text-align: right;
+      text-shadow: 1px 1px 0 #000; pointer-events: none; }
+    .skip { position: fixed; left: 16px; bottom: 12px; font-size: 12px; }
+    .skip a { color: #e8dcb8; }
+    .skip a:hover, .skip a:focus { color: #ffd34d; }
+    #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .4s; }
+    #fade.on { opacity: 1; }
+    .touch { display: none; }
+    @media (pointer: coarse) {
+      .help { display: none; }
+      .touch { display: grid; position: fixed; bottom: 40px; left: 16px; grid-template-columns: repeat(3, 56px);
+        grid-template-rows: repeat(2, 56px); gap: 6px; }
+      .touch.right { left: auto; right: 16px; grid-template-columns: 96px; grid-template-rows: 56px; }
+      .touch button { font: inherit; font-size: 20px; color: #ffd34d; background: rgba(0,0,0,.55);
+        border: 2px solid #ffd34d; border-radius: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+      .touch.right button { font-size: 14px; }
+      .skip { bottom: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="view" aria-label="Ein Gang mit Türen. Die Türen führen zu Blog, Gästebuch, Über mich und Archiv."></canvas>
+  <div class="crosshair" aria-hidden="true"></div>
+  <div class="hud" aria-hidden="true"><b>sandroleone.ch</b></div>
+  <div class="help" aria-hidden="true">W/S / ↑↓ gehen · A/D seitlich<br>←→ oder Maus ziehen: umschauen<br>E / Klick: Tür öffnen</div>
+  <div id="prompt" hidden></div>
+
+  <div class="touch" aria-hidden="true">
+    <span></span><button data-key="fwd">▲</button><span></span>
+    <button data-key="turnL">◀</button><button data-key="back">▼</button><button data-key="turnR">▶</button>
+  </div>
+  <div class="touch right" aria-hidden="true"><button data-key="open">ÖFFNEN</button></div>
+
+  <nav class="skip" aria-label="Gang überspringen">
+    Gang überspringen:
+    <a href="blog/">Blog</a> ·
+    <a href="gaestebuch/">Gästebuch</a> ·
+    <a href="ueber-mich/">Über mich</a> ·
+    <a href="archiv/">Archiv</a>
+  </nav>
+  <div id="fade"></div>
+
+  <noscript>
+    <p style="position:fixed;inset:0;padding:2em;background:#000">Ohne JavaScript bleibt der Gang dunkel.
+      Nimm die Abkürzung: <a href="blog/">Blog</a> · <a href="gaestebuch/">Gästebuch</a> ·
+      <a href="ueber-mich/">Über mich</a> · <a href="archiv/">Archiv</a></p>
+  </noscript>
+  <script src="assets/gang.js"></script>
+</body>
+</html>

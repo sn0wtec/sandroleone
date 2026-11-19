@@ -1,0 +1,97 @@
+/* sandroleone.ch – Oldschool-Unterseiten. Bewusst wie 2003. */
+body {
+  margin: 0;
+  padding: 20px 10px 40px;
+  color: #000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 17px;
+  background-color: #1d2b6b;
+  background-image:
+    radial-gradient(#ffffff 1px, transparent 1.5px),
+    radial-gradient(#9fb3ff 1px, transparent 1.5px);
+  background-size: 60px 60px, 37px 37px;
+  background-position: 0 0, 19px 23px;
+}
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fffbe6;
+  border: 4px ridge #c0c0c0;
+  padding: 0 0 12px;
+}
+.titlebar {
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #fff;
+  font: bold 14px Tahoma, Verdana, sans-serif;
+  padding: 3px 6px;
+  display: flex;
+  justify-content: space-between;
+}
+.titlebar span:last-child { letter-spacing: 3px; }
+h1 {
+  font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive;
+  color: #c00000;
+  text-align: center;
+  font-size: 34px;
+  margin: 18px 10px 4px;
+  text-shadow: 2px 2px 0 #ffd34d;
+}
+.marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  background: #000;
+  color: #00ff00;
+  font: 14px "Courier New", monospace;
+  padding: 3px 0;
+  border-top: 2px solid #808080;
+  border-bottom: 2px solid #808080;
+  margin: 8px 0 12px;
+}
+.marquee span { display: inline-block; padding-left: 100%; animation: scroll 16s linear infinite; }
+@keyframes scroll { to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) { .marquee span { animation: none; padding-left: 10px; } }
+.content { padding: 0 20px; }
+a { color: #0000ee; }
+a:visited { color: #551a8b; }
+hr { border: 0; height: 4px; background: linear-gradient(90deg, red, orange, yellow, lime, cyan, blue, magenta); margin: 18px 0; }
+.construction {
+  margin: 14px 20px;
+  padding: 10px;
+  text-align: center;
+  font: bold 16px Verdana, sans-serif;
+  background: repeating-linear-gradient(45deg, #ffd800 0 14px, #111 14px 28px);
+}
+.construction span { background: #ffd800; padding: 4px 10px; border: 2px solid #111; display: inline-block; }
+.back {
+  display: inline-block;
+  margin: 6px 20px 0;
+  font: bold 14px Verdana, sans-serif;
+  padding: 4px 10px;
+  background: #c0c0c0;
+  border: 3px outset #fff;
+  color: #000;
+  text-decoration: none;
+}
+.back:active { border-style: inset; }
+.badges { text-align: center; margin-top: 18px; }
+.badge {
+  display: inline-block;
+  width: 88px; height: 31px;
+  box-sizing: border-box;
+  border: 1px solid #000;
+  font: 9px/1.1 Verdana, sans-serif;
+  vertical-align: middle;
+  margin: 2px;
+  padding: 3px;
+  text-align: left;
+}
+.badge.a { background: #000; color: #0f0; }
+.badge.b { background: #ffd34d; color: #000; }
+.badge.c { background: #c00; color: #fff; }
+footer { text-align: center; font: 12px Verdana, sans-serif; color: #444; margin-top: 14px; }
+.post { border: 2px dashed #999; padding: 8px 14px; margin: 12px 0; background: #fff; }
+.post h2 { margin: 4px 0; font-size: 22px; color: #000080; }
+.post .date { font: italic 13px Verdana, sans-serif; color: #666; }
+form.gb { display: grid; gap: 6px; max-width: 420px; }
+form.gb input, form.gb textarea, form.gb button { font: 15px "Courier New", monospace; }
+form.gb fieldset { border: 2px groove #c0c0c0; }
