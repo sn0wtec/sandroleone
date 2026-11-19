@@ -13,6 +13,10 @@
  *   POST   /admin/thoughts              neuer Gedanke {text}
  *   PUT    /admin/thoughts/:id          bearbeiten {text}
  *   DELETE /admin/thoughts/:id          löschen
+ *
+ * Besucherzähler:
+ *   GET  /counter        aktueller Stand
+ *   POST /counter/hit    +1 (der Browser zählt sich nur einmal pro Sitzung)
  */
 
 const PAGE_SIZE = 20;
@@ -36,6 +40,8 @@ export default {
       if (path === '/entries' && request.method === 'GET') return listPublic(url, env, cors);
       if (path === '/entries' && request.method === 'POST') return createEntry(request, env, cors);
       if (path === '/thoughts' && request.method === 'GET') return listThoughts(url, env, cors);
+      if (path === '/counter' && request.method === 'GET') return counter(env, cors, false);
+      if (path === '/counter/hit' && request.method === 'POST') return counter(env, cors, true);
 
       if (path.startsWith('/admin/')) {
         if (!(await isAdmin(request, env))) return json({ error: 'Nicht berechtigt.' }, 401, cors);
@@ -98,6 +104,11 @@ async function createEntry(request, env, cors) {
     } catch { return json({ error: 'Die Homepage-Adresse sieht ungültig aus.' }, 400, cors); }
   }
 
+  // Prüfwerte älter als 24 h entfernen (siehe Datenschutzerklärung)
+  await env.DB.prepare(
+    "UPDATE entries SET ip_hash = '' WHERE ip_hash != '' AND created_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-1 day')"
+  ).run();
+
   const ipHash = await hashIp(request, env);
   const recent = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM entries WHERE ip_hash = ? AND created_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)"
@@ -112,6 +123,14 @@ async function createEntry(request, env, cors) {
   ).bind(name, message, homepage || null, moderated ? 0 : 1, ipHash).run();
 
   return json({ status: moderated ? 'pending' : 'published' }, 201, cors);
+}
+
+// ---------- Besucherzähler ----------
+async function counter(env, cors, hit) {
+  const visits = hit
+    ? await env.DB.prepare("UPDATE counters SET value = value + 1 WHERE name = 'visits' RETURNING value").first('value')
+    : await env.DB.prepare("SELECT value FROM counters WHERE name = 'visits'").first('value');
+  return json({ visits: visits || 0 }, 200, { ...cors, 'Cache-Control': 'no-store' });
 }
 
 // ---------- Gedanken ----------

@@ -22,6 +22,11 @@
     @media (prefers-reduced-motion: reduce) { #prompt { animation: none; } #fade { transition: none; } }
     .crosshair { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px;
       background: #ffd34d; opacity: .6; pointer-events: none; }
+    .visitors { position: fixed; left: 16px; top: 34px; font-size: 12px; text-shadow: 1px 1px 0 #000; pointer-events: none; }
+    .visitors b { background: #000; color: #0f0; padding: 0 4px; letter-spacing: 2px; border: 1px solid #333; text-shadow: none; }
+    .sound { position: fixed; right: 16px; bottom: 10px; font: 12px "Courier New", monospace; color: #e8dcb8;
+      background: rgba(0,0,0,.55); border: 1px solid #e8dcb8; padding: 3px 8px; cursor: pointer; }
+    .sound:hover, .sound:focus-visible { color: #ffd34d; border-color: #ffd34d; }
     .help { position: fixed; right: 16px; top: 12px; font-size: 12px; opacity: .75; text-align: right;
       text-shadow: 1px 1px 0 #000; pointer-events: none; }
     .skip { position: fixed; left: 16px; bottom: 12px; font-size: 12px; }
@@ -39,6 +44,7 @@
         border: 2px solid #ffd34d; border-radius: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
       .touch.right button { font-size: 14px; }
       .skip { bottom: 4px; }
+      .sound { top: 12px; bottom: auto; }
     }
   </style>
 </head>
@@ -47,6 +53,8 @@
   <div class="crosshair" aria-hidden="true"></div>
   <div class="hud" aria-hidden="true"><b>sandroleone.ch</b></div>
   <div class="help" aria-hidden="true">W/S / ↑↓ gehen · A/D seitlich<br>←→ oder Maus ziehen: umschauen<br>E / Klick: Tür öffnen</div>
+  <div class="visitors" aria-label="Besucherzähler">Besucher <b data-visits>······</b></div>
+  <button id="sound" class="sound" type="button" aria-pressed="false">🔇 Ton aus</button>
   <div id="prompt" hidden></div>
 
   <div class="touch" aria-hidden="true">
@@ -60,15 +68,18 @@
     <a href="blog/">Gedanken</a> ·
     <a href="gaestebuch/">Gästebuch</a> ·
     <a href="ueber-mich/">Über mich</a> ·
-    <a href="archiv/">Archiv</a>
+    <a href="archiv/">Archiv</a> ·
+    <a href="datenschutz/">Datenschutz</a>
   </nav>
   <div id="fade"></div>
 
   <noscript>
     <p style="position:fixed;inset:0;padding:2em;background:#000">Ohne JavaScript bleibt der Gang dunkel.
       Nimm die Abkürzung: <a href="blog/">Gedanken</a> · <a href="gaestebuch/">Gästebuch</a> ·
-      <a href="ueber-mich/">Über mich</a> · <a href="archiv/">Archiv</a></p>
+      <a href="ueber-mich/">Über mich</a> · <a href="archiv/">Archiv</a> · <a href="datenschutz/">Datenschutz</a></p>
   </noscript>
   <script src="assets/gang.js"></script>
+  <script src="assets/gb-config.js"></script>
+  <script src="assets/counter.js"></script>
 </body>
 </html>

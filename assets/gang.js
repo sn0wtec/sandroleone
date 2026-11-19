@@ -21,9 +21,104 @@
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(W, H);
   const buf = new Uint32Array(img.data.buffer);
+  const ZBUF = new Float32Array(W);
 
   const promptEl = document.getElementById('prompt');
   const fadeEl = document.getElementById('fade');
+
+  // ---------- Ton (WebAudio, alles synthetisch, standardmässig aus) ----------
+  const Sound = (() => {
+    let ac = null, master = null, hum = null, noiseBuf = null;
+    let on = false;
+    try { on = localStorage.getItem('gang-sound') === 'on'; } catch (e) {}
+    const btn = document.getElementById('sound');
+
+    function init() {
+      if (ac) return;
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.gain.value = 0.7; master.connect(ac.destination);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      // leises Brummen der Neonröhren
+      hum = ac.createGain(); hum.gain.value = 0; hum.connect(master);
+      for (const [f, v] of [[50, 0.012], [100, 0.006]]) {
+        const o = ac.createOscillator(); o.frequency.value = f;
+        const g = ac.createGain(); g.gain.value = v; o.connect(g); g.connect(hum); o.start();
+      }
+    }
+    function noise(t, dur, freq, q, vol, type = 'lowpass') {
+      const src = ac.createBufferSource(); src.buffer = noiseBuf;
+      src.playbackRate.value = 0.8 + Math.random() * 0.4;
+      const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.05);
+    }
+    function render() {
+      if (!btn) return;
+      btn.textContent = on ? '🔊 Ton an' : '🔇 Ton aus';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    function set(v) {
+      on = v;
+      try { localStorage.setItem('gang-sound', on ? 'on' : 'off'); } catch (e) {}
+      if (on) { init(); ac.resume(); hum.gain.setTargetAtTime(1, ac.currentTime, 0.3); }
+      else if (ac) hum.gain.setTargetAtTime(0, ac.currentTime, 0.1);
+      render();
+    }
+    if (btn) btn.addEventListener('click', e => { e.stopPropagation(); set(!on); btn.blur(); });
+    // Browser erlauben Ton erst nach einer Interaktion
+    if (on) {
+      const wake = () => { set(true); removeEventListener('pointerdown', wake); removeEventListener('keydown', wake); };
+      addEventListener('pointerdown', wake); addEventListener('keydown', wake);
+    }
+    render();
+
+    const ready = () => on && ac && ac.state === 'running';
+    return {
+      get on() { return on; },
+      step() {
+        if (!ready()) return;
+        const t = ac.currentTime;
+        noise(t, 0.09, 420 + Math.random() * 160, 1.2, 0.5);
+        noise(t + 0.01, 0.04, 2200, 0.8, 0.05, 'bandpass');
+      },
+      door() {
+        if (!ready()) return;
+        const t = ac.currentTime;
+        // Knarren: Sägezahn mit Wackeln durch Bandpass
+        const o = ac.createOscillator(); o.type = 'sawtooth';
+        o.frequency.setValueAtTime(70, t);
+        o.frequency.linearRampToValueAtTime(130, t + 0.35);
+        o.frequency.linearRampToValueAtTime(95, t + 0.55);
+        const lfo = ac.createOscillator(); lfo.frequency.value = 23;
+        const lg = ac.createGain(); lg.gain.value = 18; lfo.connect(lg); lg.connect(o.frequency);
+        const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 6;
+        const g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.35, t + 0.05);
+        g.gain.setValueAtTime(0.35, t + 0.45);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+        o.connect(f); f.connect(g); g.connect(master);
+        o.start(t); lfo.start(t); o.stop(t + 0.65); lfo.stop(t + 0.65);
+        noise(t + 0.02, 0.06, 1500, 2, 0.25, 'bandpass');   // Klinke
+      },
+      locked() {
+        if (!ready()) return;
+        const t = ac.currentTime;
+        for (let i = 0; i < 3; i++) noise(t + i * 0.09, 0.05, 1800 + i * 200, 3, 0.3, 'bandpass');
+      },
+      paper() {
+        if (!ready()) return;
+        const t = ac.currentTime;
+        noise(t, 0.25, 3500, 0.7, 0.12, 'highpass');
+      }
+    };
+  })();
 
   // ---------- Karte ----------
   // 0 = frei, 1 = Backstein, 2/3 = Plakat, 10+ = Türen
@@ -36,6 +131,8 @@
   map[10][0] = 12;                              // Über mich
   map[13][3] = 13;                              // ??? (verschlossen)
   map[16][2] = 14; map[16][1] = 15;             // Doppeltür Archiv (links/rechts)
+  map[1][3] = 4;                                // Zettel "Datenschutz" beim Eingang
+  map[7][0] = 5; map[4][3] = 6; map[10][3] = 7; map[15][0] = 8;   // Bilderrahmen
 
   const DOORS = {
     10: { label: 'GEDANKEN', name: 'Gedanken', href: 'blog/', wood: [122, 62, 32] },
@@ -46,6 +143,13 @@
     15: null // rechte Hälfte, zeigt auf 14
   };
   DOORS[15] = DOORS[14];
+  DOORS[4] = { name: 'Datenschutz', href: 'datenschutz/', verb: 'lesen', note: true };
+
+  // Pflanzen (Sprites) – stehen am Rand, blockieren aber trotzdem
+  const SPRITES = [
+    { x: 2.76, y: 3.3 }, { x: 1.24, y: 8.4 }, { x: 2.76, y: 11.7 }, { x: 1.24, y: 15.55 }
+  ];
+  const SPRITE_R = 0.2;
 
   const LAMPS = [
     { x: 2, y: 2.5 }, { x: 2, y: 6.5 }, { x: 2, y: 10.5, flicker: true }, { x: 2, y: 14.5 }
@@ -202,6 +306,88 @@
     return toTex(c);
   }
 
+  function texNote() {
+    const c = makeCanvas(TEX, TEX), g = c.getContext('2d');
+    drawBricks(g);
+    g.save(); g.translate(64, 62); g.rotate(-0.04);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-27, -35, 58, 76);
+    g.fillStyle = '#f4f1e6'; g.fillRect(-30, -38, 58, 76);
+    g.fillStyle = '#1a1a1a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = 'bold 11px "Courier New", monospace';
+    g.fillText('DATEN-', -1, -24); g.fillText('SCHUTZ', -1, -13);
+    g.fillStyle = '#9a9a9a';
+    for (let i = 0; i < 6; i++) g.fillRect(-22, -2 + i * 6, 36 - (i % 3) * 7, 2);
+    g.fillStyle = '#c62828'; g.beginPath(); g.arc(-1, -34, 3, 0, Math.PI * 2); g.fill();
+    g.restore();
+    noise(g, TEX, TEX, 10);
+    return toTex(c);
+  }
+
+  // Bilderrahmen mit kleinen Pixel-Gemälden
+  function texFrame(kind) {
+    const c = makeCanvas(TEX, TEX), g = c.getContext('2d');
+    drawBricks(g);
+    const x0 = 24, y0 = 26, w = 80, h = 60;
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(x0 - 4, y0 - 2, w + 12, h + 12);
+    g.fillStyle = '#8a6a22'; g.fillRect(x0 - 8, y0 - 8, w + 16, h + 16);
+    g.fillStyle = '#c9a24a'; g.fillRect(x0 - 6, y0 - 6, w + 12, h + 12);
+    g.fillStyle = '#6e5418'; g.fillRect(x0 - 2, y0 - 2, w + 4, h + 4);
+    g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip();
+    const sky = (a, b) => { const gr = g.createLinearGradient(0, y0, 0, y0 + h); gr.addColorStop(0, a); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(x0, y0, w, h); };
+    const ridge = (base, amp, color, s1) => {
+      g.fillStyle = color; g.beginPath(); g.moveTo(x0, y0 + h);
+      for (let x = 0; x <= w; x += 4) g.lineTo(x0 + x, y0 + base - Math.abs(Math.sin(x * s1 + base)) * amp - (x % 12 === 0 ? 3 : 0));
+      g.lineTo(x0 + w, y0 + h); g.fill();
+    };
+    if (kind === 'berge' || kind === 'berge2') {
+      sky(kind === 'berge' ? '#7fb6e8' : '#f2b880', kind === 'berge' ? '#d6ecff' : '#f7e1c0');
+      ridge(36, 22, '#8c96a8', 0.07); ridge(44, 14, '#5d6b80', 0.11);
+      g.fillStyle = '#f5f7fa';
+      for (let x = 0; x < w; x += 2) { const y = 36 - Math.abs(Math.sin(x * 0.07 + 36)) * 22; if (y < 22) g.fillRect(x0 + x, y0 + y, 2, 3); }
+      g.fillStyle = '#3d6b3a'; g.fillRect(x0, y0 + 50, w, 10);
+    } else if (kind === 'meer') {
+      sky('#ff9a5a', '#ffd27a');
+      g.fillStyle = '#ffef9a'; g.beginPath(); g.arc(x0 + 52, y0 + 34, 10, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#2b5f8a'; g.fillRect(x0, y0 + 36, w, 24);
+      g.fillStyle = '#ffd27a'; for (let i = 0; i < 6; i++) g.fillRect(x0 + 44 - i, y0 + 38 + i * 3, 16 + i * 2, 1);
+    } else { // nacht
+      sky('#0b1030', '#26305e');
+      g.fillStyle = '#fff';
+      for (let i = 0; i < 40; i++) g.fillRect(x0 + rnd() * w, y0 + rnd() * 40, 1, 1);
+      g.fillStyle = '#f5edc4'; g.beginPath(); g.arc(x0 + 60, y0 + 15, 7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#26305e'; g.beginPath(); g.arc(x0 + 63, y0 + 13, 6, 0, Math.PI * 2); g.fill();
+      ridge(48, 10, '#111628', 0.09);
+    }
+    g.restore();
+    noise(g, TEX, TEX, 8);
+    return toTex(c);
+  }
+
+  function texPlant() {
+    const c = makeCanvas(TEX, TEX), g = c.getContext('2d');
+    // Blätter
+    for (let i = 0; i < 26; i++) {
+      const a = -Math.PI / 2 + (rnd() - 0.5) * 2.4, len = 28 + rnd() * 30;
+      const bx = 64, by = 92;
+      const ex = bx + Math.cos(a) * len, ey = by + Math.sin(a) * len;
+      g.strokeStyle = '#2e5a24'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + (ex - bx) * 0.3, ey + 10, ex, ey); g.stroke();
+      g.fillStyle = rnd() > 0.5 ? '#4f8f3a' : '#3d7a2e';
+      g.beginPath(); g.ellipse(ex, ey, 8, 4, a, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#7cc05a'; g.fillRect(ex - 2, ey - 1, 3, 1);
+    }
+    // Topf
+    g.fillStyle = '#a4502c';
+    g.beginPath(); g.moveTo(42, 96); g.lineTo(86, 96); g.lineTo(80, 127); g.lineTo(48, 127); g.fill();
+    g.fillStyle = '#c4653a'; g.fillRect(40, 92, 48, 7);
+    g.fillStyle = '#7a3a1e'; g.fillRect(48, 100, 2, 26);
+    // Pixel ohne Farbe bleiben transparent
+    const d = g.getImageData(0, 0, TEX, TEX);
+    for (let i = 3; i < d.data.length; i += 4) d.data[i] = d.data[i] > 128 ? 255 : 0;
+    g.putImageData(d, 0, 0);
+    return toTex(c);
+  }
+
   const T = {};
   T[1] = texBricks();
   T[2] = texPoster('SANDRO');
@@ -209,6 +395,9 @@
   for (const id of [10, 11, 12, 13]) T[id] = texDoor(DOORS[id]);
   // Von innen gesehen liegt x=2 links und x=1 rechts
   [T[14], T[15]] = texDoubleDoor(DOORS[14]);
+  T[4] = texNote();
+  T[5] = texFrame('berge'); T[6] = texFrame('meer'); T[7] = texFrame('nacht'); T[8] = texFrame('berge2');
+  const TPLANT = texPlant();
   const TFLOOR = texFloor();
   const TCEIL = texCeil();
 
@@ -254,7 +443,9 @@
   function solid(x, y) {
     const cx = x | 0, cy = y | 0;
     if (cy < 0 || cy >= MAP_H || cx < 0 || cx >= MAP_W) return true;
-    return map[cy][cx] !== 0;
+    if (map[cy][cx] !== 0) return true;
+    for (const s of SPRITES) { const dx = x - s.x, dy = y - s.y; if (dx * dx + dy * dy < SPRITE_R * SPRITE_R) return true; }
+    return false;
   }
   function tryMove(dx, dy) {
     const nx = px + dx, ny = py + dy;
@@ -277,7 +468,9 @@
       mx /= len; my /= len;
       const step = MOVE_SPEED * dt;
       tryMove(mx * step, my * step);
+      const before = Math.floor(bobPhase / Math.PI);
       bobPhase += dt * 9;
+      if (Math.floor(bobPhase / Math.PI) !== before) Sound.step();
     } else {
       bobPhase *= 0.9;
     }
@@ -334,6 +527,7 @@
 
     // Wände (DDA)
     focus = null;
+    const zBuf = ZBUF;
     for (let x = 0; x < W; x++) {
       const camX = 2 * x / W - 1;
       const rdx = dirX + plX * camX, rdy = dirY + plY * camX;
@@ -350,6 +544,7 @@
         if (tile) break;
       }
       const perp = side === 0 ? sdx - ddx : sdy - ddy;
+      zBuf[x] = perp;
       let wallX = side === 0 ? py + perp * rdy : px + perp * rdx;
       const hitX = side === 0 ? (stepX > 0 ? mx : mx + 1) : px + perp * rdx;
       const hitY = side === 1 ? (stepY > 0 ? my : my + 1) : py + perp * rdy;
@@ -374,6 +569,34 @@
       }
     }
 
+    // Pflanzen (Sprites), von hinten nach vorne
+    const invDet = 1 / (plX * dirY - dirX * plY);
+    const order = SPRITES.map(s => ({ s, d: (px - s.x) ** 2 + (py - s.y) ** 2 })).sort((a, b) => b.d - a.d);
+    for (const { s } of order) {
+      const sx = s.x - px, sy = s.y - py;
+      const tX = invDet * (dirY * sx - dirX * sy);
+      const tY = invDet * (-plY * sx + plX * sy);
+      if (tY <= 0.1) continue;
+      const screenX = (W / 2) * (1 + tX / tY);
+      const size = K / tY;                       // Wandhöhe in dieser Distanz
+      const sprH = size * 0.62, sprW = sprH;
+      const floorY = horizon + size / 2;
+      const top = floorY - sprH;
+      const xs = Math.max(0, Math.ceil(screenX - sprW / 2)), xe = Math.min(W, Math.ceil(screenX + sprW / 2));
+      const ys = Math.max(0, Math.ceil(top)), ye = Math.min(H, Math.ceil(floorY));
+      const f = lightAt(s.x, s.y) / (1 + tY * tY * 0.012);
+      for (let x = xs; x < xe; x++) {
+        if (tY >= zBuf[x]) continue;
+        const tx = (((x - (screenX - sprW / 2)) * TEX / sprW) | 0) & (TEX - 1);
+        for (let y = ys; y < ye; y++) {
+          const ty = (((y - top) * TEX / sprH) | 0) & (TEX - 1);
+          const c = TPLANT[ty * TEX + tx];
+          if ((c >>> 24) === 0) continue;
+          buf[y * W + x] = shade(c, f);
+        }
+      }
+    }
+
     // Scanlines: jede zweite Zeile etwas dunkler
     for (let y = 0; y < H; y += 2) {
       const row = y * W;
@@ -390,7 +613,7 @@
     if (performance.now() < lockedMsgUntil) text = 'Verschlossen. Noch.';
     else if (focus) {
       text = focus.locked ? '??? – verschlossen'
-        : (isTouch ? `Tippe auf «Öffnen»: ${focus.name}` : `[E] ${focus.name} betreten`);
+        : (isTouch ? `Tippe auf «Öffnen»: ${focus.name}` : `[E] ${focus.name} ${focus.verb || 'betreten'}`);
     }
     if (text !== lastPrompt) {
       promptEl.textContent = text;
@@ -402,12 +625,13 @@
 
   function openFocused() {
     if (!focus || leaving) return;
-    if (focus.locked) { lockedMsgUntil = performance.now() + 1600; return; }
+    if (focus.locked) { lockedMsgUntil = performance.now() + 1600; Sound.locked(); return; }
     leaving = true;
+    if (focus.note) Sound.paper(); else Sound.door();
     try { sessionStorage.setItem('gang-pos', JSON.stringify({ x: px, y: py, a: pa })); } catch (e) { /* egal */ }
     fadeEl.classList.add('on');
     const href = focus.href;
-    setTimeout(() => { location.href = href; }, 420);
+    setTimeout(() => { location.href = href; }, Sound.on ? 650 : 420);
   }
 
   // Zurück-Navigation (bfcache): Überblendung zurücksetzen

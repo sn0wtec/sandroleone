@@ -110,3 +110,8 @@ form.gb small { font: 11px Verdana, sans-serif; color: #555; }
 .post.thought { border-style: solid; border-color: #c0c0c0; border-left: 6px solid #000080; }
 .post.thought .gb-msg { font-size: 18px; margin: 6px 0 2px; }
 form.gb textarea[name=text] { font-size: 16px; }
+.legal h2 { font: bold 18px Verdana, sans-serif; color: #000080; margin: 18px 0 4px; }
+.legal p { margin: 4px 0 10px; line-height: 1.4; }
+footer a { color: #444; }
+.visitors-box { text-align: center; font: 13px Verdana, sans-serif; margin-top: 12px; }
+.visitors-box b { font: bold 15px "Courier New", monospace; background: #000; color: #0f0; padding: 1px 5px; letter-spacing: 2px; border: 2px inset #808080; }

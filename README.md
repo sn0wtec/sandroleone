@@ -26,3 +26,9 @@ Lokal testen: `python3 -m http.server` im Repo-Ordner, dann http://localhost:800
 
 Lokal: `cd gaestebuch-worker && npm install && npx wrangler d1 migrations apply sandroleone-gaestebuch --local && npx wrangler dev`
 (Admin-Passwort lokal in `.dev.vars`: `ADMIN_PASSWORD=...`), dann `/gaestebuch/?api=http://localhost:8787`
+
+## Weiteres
+
+- `datenschutz/` – Datenschutzerklärung & Impressum (Zettel an der Wand beim Eingang)
+- Besucherzähler: Worker-Route `/counter`, Anzeige über `assets/counter.js` (`data-visits`)
+- Ton im Gang: synthetisch per WebAudio, standardmässig aus
