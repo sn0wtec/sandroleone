@@ -77,7 +77,7 @@
       if (!r.ok) throw new Error(d.error || 'Fehler beim Senden.');
       form.reset();
       if (d.status === 'published') { status.textContent = '★ Danke für deinen Eintrag! ★'; load(true); }
-      else status.textContent = '★ Danke! Dein Eintrag erscheint, sobald er freigeschaltet ist. ★';
+      else status.textContent = '★ Danke! Dein Eintrag ist eingegangen. ★';
     } catch (err) {
       status.textContent = err.message || 'Fehler beim Senden.';
     } finally {
