@@ -6,6 +6,7 @@
   'use strict';
 
   // ---------- Grundeinstellungen ----------
+  const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const W = 320, H = 180;          // interne Auflösung (wird pixelig hochskaliert)
   const TEX = 128;                 // Texturgrösse
   const PLANE = 0.72;              // Sichtfeld
@@ -213,9 +214,12 @@
 
   // ---------- Licht ----------
   let time = 0;
+  // Bewusst KEIN Flackern: Eine "müde" Lampe dimmt nur langsam und weich
+  // (unter 0.2 Hz, nie unter ~65 %). Keine Blitze, kein harter Wechsel (WCAG 2.3.1).
+  // Bei "Bewegung reduzieren" im Betriebssystem leuchtet sie konstant.
   function flick(t) {
-    const s = Math.sin(t * 13) + Math.sin(t * 31.7) * 0.6 + Math.sin(t * 3.1);
-    return s > 1.6 ? 0.15 : 0.85 + 0.15 * Math.sin(t * 50);
+    if (REDUCED_MOTION) return 1;
+    return 0.83 + 0.1 * Math.sin(t * 1.1) + 0.06 * Math.sin(t * 0.43 + 1);
   }
   const lampPower = new Float32Array(LAMPS.length);
   function lightAt(x, y) {
@@ -283,7 +287,7 @@
   function render() {
     const dirX = Math.cos(pa), dirY = Math.sin(pa);
     const plX = -dirY * PLANE, plY = dirX * PLANE;
-    const horizon = (H / 2 + Math.sin(bobPhase) * 1.6) | 0;
+    const horizon = (H / 2 + Math.sin(bobPhase) * (REDUCED_MOTION ? 0 : 1.6)) | 0;
 
     for (let i = 0; i < LAMPS.length; i++) lampPower[i] = LAMPS[i].flicker ? flick(time) : 1;
 
